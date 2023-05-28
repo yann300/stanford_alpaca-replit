@@ -11,6 +11,8 @@
 
 This was the repo for the Stanford Alpaca project, which is edited to become a trainer for Alpaca-format datasets over Replit's 3B Code Model:
 
+- The Base Model: [Replit 3B Code](https://huggingface.co/replit/replit-code-v1-3b)
+
 - The code for [fine-tuning the model](#fine-tuning).
 
 
