@@ -24,19 +24,14 @@ from torch.utils.data import Dataset
 from transformers import Trainer
 
 IGNORE_INDEX = -100
-DEFAULT_PAD_TOKEN = "[PAD]"
-DEFAULT_EOS_TOKEN = "</s>"
-DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_PAD_TOKEN = "<|pad|>"
+DEFAULT_EOS_TOKEN = "<|endoftext|>"
 DEFAULT_UNK_TOKEN = "<unk>"
 PROMPT_DICT = {
     "prompt_input": (
-        "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
     ),
     "prompt_no_input": (
-        "Below is an instruction that describes a task. "
-        "Write a response that appropriately completes the request.\n\n"
         "### Instruction:\n{instruction}\n\n### Response:"
     ),
 }
@@ -44,7 +39,7 @@ PROMPT_DICT = {
 
 @dataclass
 class ModelArguments:
-    model_name_or_path: Optional[str] = field(default="facebook/opt-125m")
+    model_name_or_path: Optional[str] = field(default="replit/replit-code-v1-3b")
 
 
 @dataclass
@@ -55,9 +50,9 @@ class DataArguments:
 @dataclass
 class TrainingArguments(transformers.TrainingArguments):
     cache_dir: Optional[str] = field(default=None)
-    optim: str = field(default="adamw_torch")
+    optim: str = field(default="adamw_torch_fused")
     model_max_length: int = field(
-        default=512,
+        default=2000,
         metadata={"help": "Maximum sequence length. Sequences will be right padded (and possibly truncated)."},
     )
 
@@ -200,8 +195,6 @@ def train():
         special_tokens_dict["pad_token"] = DEFAULT_PAD_TOKEN
     if tokenizer.eos_token is None:
         special_tokens_dict["eos_token"] = DEFAULT_EOS_TOKEN
-    if tokenizer.bos_token is None:
-        special_tokens_dict["bos_token"] = DEFAULT_BOS_TOKEN
     if tokenizer.unk_token is None:
         special_tokens_dict["unk_token"] = DEFAULT_UNK_TOKEN
 
