@@ -53,17 +53,6 @@ We used the following prompts for fine-tuning the Replit model:
 
 ## Fine-tuning
 
-We fine-tune our models using standard Hugging Face training code.
-We fine-tune LLaMA-7B and LLaMA-13B with the following hyperparameters:
-
-| Hyperparameter | LLaMA-7B | LLaMA-13B |
-|----------------|----------|-----------|
-| Batch size     | 128      | 128       |
-| Learning rate  | 2e-5     | 1e-5      |
-| Epochs         | 3        | 5         |
-| Max length     | 512      | 512       |
-| Weight decay   | 0        | 0         |
-
 To fine-tune for Replit's model, first install the requirements
 
 ```bash
