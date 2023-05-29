@@ -26,7 +26,7 @@ from transformers import Trainer
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "<|pad|>"
 DEFAULT_EOS_TOKEN = "<|endoftext|>"
-DEFAULT_UNK_TOKEN = "<unk>"
+DEFAULT_UNK_TOKEN = "<|unk|>"
 PROMPT_DICT = {
     "prompt_input": (
         "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
