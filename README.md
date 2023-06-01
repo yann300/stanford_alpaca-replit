@@ -75,30 +75,30 @@ To fine-tune for Replit's model, first install the requirements
 pip install -r requirements.txt
 ```
 
-Below is a command that fine-tunes Replit-3B with an alpaca-formated dataset on a machine with 4 A100 80G GPUs in FSDP `full_shard` mode.
+The train.py script defaults to 2000 sequence length for training. It runs in small batch size at this sequence length on an a100 80gb. You will save a significant amount of vram, and thus, can train faster, with a smaller sequence length. Training on 2x a100 80gb with what is possible with 2000 token sequence length takes about 2.5 hours, with 512 token length, only 45~ minutes. 
+
+Below is a command that fine-tunes Replit-3B with an alpaca-formated dataset on a machine with 2 A100 80G GPUs with 2000 token sequence length.
 
 Replace `<your_random_port>` with a port of your own, `<path_to_replit_model>` with the path to your converted checkpoint and tokenizer or leave default for Replit's base code model, and `<your_output_dir>` with where you want to store your outputs.
 
 ```bash
-torchrun --nproc_per_node=4 --master_port=<your_random_port> train.py \
+torchrun --nproc_per_node=2 --master_port=<your_random_port> train.py \
     --model_name_or_path <path_to_replit_model> \
     --data_path ./<your_dataset>.json \
     --bf16 True \
     --output_dir <your_output_dir> \
     --num_train_epochs 3 \
-    --per_device_train_batch_size 4 \
-    --per_device_eval_batch_size 4 \
-    --gradient_accumulation_steps 8 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 4 \
     --evaluation_strategy "no" \
     --save_strategy "steps" \
-    --save_steps 200 \
+    --save_steps 50 \
     --save_total_limit 2 \
     --learning_rate 2e-5 \
     --weight_decay 0. \
     --warmup_ratio 0.03 \
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
-    --tf32 True
 ```
 
 Note the given training script is meant to be simple and easy to use, and is not particularly optimized.
