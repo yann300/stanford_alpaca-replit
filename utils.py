@@ -7,10 +7,7 @@ import sys
 import time
 import json
 from typing import Optional, Sequence, Union
-
-import openai
 import tqdm
-from openai import openai_object
 import copy
 
 def _make_w_io_base(f, mode: str):
