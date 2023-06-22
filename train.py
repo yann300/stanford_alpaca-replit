@@ -16,12 +16,16 @@ import copy
 import logging
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Sequence
+from datasets import load_dataset, concatenate_datasets
+from format_data import convert_to_df
 
 import torch
 import transformers
 import utils
 from torch.utils.data import Dataset
 from transformers import Trainer
+import torch
+torch.cuda.empty_cache()
 
 IGNORE_INDEX = -100
 DEFAULT_PAD_TOKEN = "<|pad|>"
@@ -118,6 +122,18 @@ def preprocess(
         label[:source_len] = IGNORE_INDEX
     return dict(input_ids=input_ids, labels=labels)
 
+def preprocessWithoutTarget(
+    sources: Sequence[str],
+    tokenizer: transformers.PreTrainedTokenizer,
+) -> Dict:
+    """Preprocess the data by tokenizing."""
+    examples = [s for s in zip(sources)]
+    examples_tokenized, sources_tokenized = [_tokenize_fn(strings, tokenizer) for strings in (examples, sources)]
+    input_ids = examples_tokenized["input_ids"]
+    labels = copy.deepcopy(input_ids)
+    for label, source_len in zip(labels, sources_tokenized["input_ids_lens"]):
+        label[:source_len] = IGNORE_INDEX
+    return dict(input_ids=input_ids, labels=labels)
 
 class SupervisedDataset(Dataset):
     """Dataset for supervised fine-tuning."""
@@ -147,32 +163,32 @@ class SupervisedDataset(Dataset):
     def __getitem__(self, i) -> Dict[str, torch.Tensor]:
         return dict(input_ids=self.input_ids[i], labels=self.labels[i])
 
+def prepareDataset(
+    tokenizer: transformers.PreTrainedTokenizer,
+) -> Dict:
+    """Preprocess the data by tokenizing."""
+    logging.warning("Loading data...")
 
-@dataclass
-class DataCollatorForSupervisedDataset(object):
-    """Collate examples for supervised fine-tuning."""
+    dataset = load_dataset("mwritescode/slither-audited-smart-contracts", 'all-plain-text', split="train")
+    # dataset.save()
+    # dataset = dataset['source_code']
+    # dataset = convert_to_df(dataset)
+    print('save data set')
+    dataset.to_parquet('slither-audited-smart-contracts.parquet')
+    print("DS size", len(dataset))
+    print("DS shape", dataset.shape)
+    def tokenize_function(examples):
+        return tokenizer(examples["source_code"], padding="max_length", truncation=True)
 
-    tokenizer: transformers.PreTrainedTokenizer
+    logging.warning("Tokenizing inputs... This may take some time...")
+    dataset = dataset.map(tokenize_function, batched=True)
+    dataset.to_parquet('slither-audited-smart-contracts-tokenized.parquet')
+    return dataset
 
-    def __call__(self, instances: Sequence[Dict]) -> Dict[str, torch.Tensor]:
-        input_ids, labels = tuple([instance[key] for instance in instances] for key in ("input_ids", "labels"))
-        input_ids = torch.nn.utils.rnn.pad_sequence(
-            input_ids, batch_first=True, padding_value=self.tokenizer.pad_token_id
-        )
-        labels = torch.nn.utils.rnn.pad_sequence(labels, batch_first=True, padding_value=IGNORE_INDEX)
-        return dict(
-            input_ids=input_ids,
-            labels=labels,
-            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
-        )
-
-
-def make_supervised_data_module(tokenizer: transformers.PreTrainedTokenizer, data_args) -> Dict:
-    """Make dataset and collator for supervised fine-tuning."""
-    train_dataset = SupervisedDataset(tokenizer=tokenizer, data_path=data_args.data_path)
-    data_collator = DataCollatorForSupervisedDataset(tokenizer=tokenizer)
-    return dict(train_dataset=train_dataset, eval_dataset=None, data_collator=data_collator)
-
+def load_local_dataset() -> Dict:
+    """Preprocess the data by tokenizing."""
+    logging.warning("Loading data...")
+    return load_dataset("parquet", data_files= "../inputs/slither-audited-smart-contracts-tokenized.parquet")
 
 def train():
     parser = transformers.HfArgumentParser((ModelArguments, DataArguments, TrainingArguments))
@@ -206,8 +222,8 @@ def train():
         model=model,
     )
 
-    data_module = make_supervised_data_module(tokenizer=tokenizer, data_args=data_args)
-    trainer = Trainer(model=model, tokenizer=tokenizer, args=training_args, **data_module)
+    train_dataset = load_local_dataset(tokenizer)
+    trainer = Trainer(model=model, tokenizer=tokenizer, args=training_args, train_dataset=train_dataset["train"], device_train_microbatch_size=1024)
     trainer.train()
     trainer.save_state()
     trainer.save_model(output_dir=training_args.output_dir)
@@ -215,3 +231,32 @@ def train():
 
 if __name__ == "__main__":
     train()
+
+"""command
+    run ovh pytorch docker
+    git clone https://github.com/yann300/stanford_alpaca-replit
+    cd stanford_alpaca-replit
+    git fetch origin solidity
+    git checkout solidity
+    pip install -r requirements.txt
+    pip install torch===2.0.0
+    pip install accelerate==0.20.1
+
+    python3 train.py \
+    --bf16 True \
+    --output_dir ../output \
+    --num_train_epochs 3 \
+    --per_device_train_batch_size 1 \
+    --gradient_accumulation_steps 4 \
+    --evaluation_strategy "no" \
+    --save_strategy "steps" \
+    --save_steps 50 \
+    --save_total_limit 2 \
+    --learning_rate 2e-5 \
+    --weight_decay 0. \
+    --warmup_ratio 0.03 \
+    --lr_scheduler_type "cosine" \
+    --logging_steps 1 \
+
+"""
+    
