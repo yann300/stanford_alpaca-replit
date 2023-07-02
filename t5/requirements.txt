@@ -1,0 +1,6 @@
+matplotlib
+pandas
+transformers
+datasets
+scikit-learn
+simplet5

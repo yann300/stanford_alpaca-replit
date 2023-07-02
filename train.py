@@ -59,6 +59,10 @@ class TrainingArguments(transformers.TrainingArguments):
         default=2000,
         metadata={"help": "Maximum sequence length. Sequences will be right padded (and possibly truncated)."},
     )
+    model_max_length: bool = field(
+        default=True,
+        metadata={"help": "fp16"},
+    )
 
 
 def smart_tokenizer_and_embedding_resize(
@@ -233,14 +237,6 @@ if __name__ == "__main__":
     train()
 
 """command
-    run ovh pytorch docker
-    git clone https://github.com/yann300/stanford_alpaca-replit
-    cd stanford_alpaca-replit
-    git fetch origin solidity
-    git checkout solidity
-    pip install -r requirements.txt
-    pip install torch===2.0.0
-    pip install accelerate==0.20.1
 
     python3 train.py \
     --bf16 True \
@@ -258,5 +254,58 @@ if __name__ == "__main__":
     --lr_scheduler_type "cosine" \
     --logging_steps 1 \
 
+    torchrun --nproc_per_node=4 --master_port=8082 train.py \
+    --output_dir ../output \
+    --num_train_epochs 3 \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 8 \
+    --evaluation_strategy "no" \
+    --save_strategy "steps" \
+    --save_steps 2000 \
+    --save_total_limit 1 \
+    --learning_rate 2e-5 \
+    --weight_decay 0. \
+    --warmup_ratio 0.03 \
+    --fsdp "full_shard auto_wrap offload"
+
+    torchrun --nproc_per_node=4 --master_port=8084 train.py \
+    --output_dir ../output \
+    --num_train_epochs 3 \
+    --per_device_train_batch_size 4 \
+    --per_device_eval_batch_size 4 \
+    --gradient_accumulation_steps 8 \
+    --evaluation_strategy "no" \
+    --save_strategy "steps" \
+    --save_steps 2000 \
+    --save_total_limit 1 \
+    --learning_rate 2e-5 \
+    --weight_decay 0. \
+    --warmup_ratio 0.03 \
+    --deepspeed "./configs/default_offload_opt_param.json" \
+    --tf32 True
+
 """
+
+
+'''
+
+sudo apt-get install software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install python3.8
+sudo apt-get install python3-pip
+
+git clone https://github.com/yann300/stanford_alpaca-replit
+cd stanford_alpaca-replit
+git fetch origin solidity
+git checkout solidity
+pip install -r requirements.txt
+pip install torch===2.0.1
+pip install accelerate==0.20.1
+
+in T5 run pip install -r requirements.txt
+
+
+'''
     
